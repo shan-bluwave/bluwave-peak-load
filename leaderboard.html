@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard | Peak Load Prediction</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bw: { dark: '#0a1628', blue: '#0066cc', accent: '#00a3ff', light: '#e6f4ff', navy: '#0d2137' }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .podium-1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+        .podium-2 { background: linear-gradient(135deg, #d1d5db, #9ca3af); }
+        .podium-3 { background: linear-gradient(135deg, #d97706, #b45309); }
+        .glow-gold { box-shadow: 0 0 20px rgba(251,191,36,0.3); }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-row { animation: slideIn 0.4s ease-out forwards; opacity: 0; }
+    </style>
+</head>
+<body class="bg-bw-dark min-h-screen text-white" style="font-family: 'Inter', sans-serif;">
+
+    <!-- Navigation -->
+    <nav class="bg-black/30 backdrop-blur-md border-b border-bw-blue/30 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-2">
+                <img src="BW_assets/BluWave-ai_Logo_-_White_Text,_Blue_Background-qde51.webp" alt="BluWave-ai" class="h-8 rounded">
+                <span class="font-bold text-lg text-bw-accent">Peak Load</span>
+            </a>
+            <div class="flex gap-4 text-sm">
+                <a href="index.html" class="hover:text-bw-accent transition">Predict</a>
+                <a href="submissions.html" class="hover:text-bw-accent transition">Submissions</a>
+                <a href="leaderboard.html" class="text-bw-accent font-semibold">Leaderboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-5xl mx-auto px-4 py-10">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold bg-gradient-to-r from-bw-accent to-cyan-300 bg-clip-text text-transparent">
+                Leaderboard
+            </h1>
+            <p class="text-blue-300/70 mt-2">Lowest cumulative deviation wins!</p>
+        </div>
+
+        <!-- Rounds Played -->
+        <div id="rounds-info" class="hidden mb-6 flex justify-center">
+            <div class="bg-white/5 border border-blue-500/20 rounded-xl px-5 py-3 text-sm text-blue-300">
+                <span class="font-semibold text-white" id="rounds-count">0</span> rounds scored
+            </div>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <div class="bg-white/5 border border-blue-500/20 rounded-xl overflow-hidden">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-blue-500/20 text-blue-300 text-sm uppercase tracking-wide">
+                        <th class="py-4 px-5 text-left">Rank</th>
+                        <th class="py-4 px-5 text-left">Name</th>
+                        <th class="py-4 px-5 text-right">Rounds</th>
+                        <th class="py-4 px-5 text-right">Total Deviation</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    <tr><td colspan="4" class="py-10 text-center text-blue-400/50">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Scoring Note -->
+        <div class="mt-6 bg-white/5 border border-blue-500/20 rounded-xl p-5 text-sm text-blue-300/70">
+            <p class="font-semibold text-blue-200 mb-2">Scoring</p>
+            <ul class="list-disc list-inside space-y-1">
+                <li><strong>Deviation</strong> = |Your Prediction - Actual Peak Load|</li>
+                <li><strong>Total Deviation</strong> = Sum of deviations across all rounds</li>
+                <li><strong>Most rounds participated ranks first</strong></li>
+                <li>Among equal participation, lowest total deviation wins</li>
+            </ul>
+        </div>
+
+        <!-- Per-Round Breakdown -->
+        <div id="breakdown-section" class="hidden mt-8">
+            <h2 class="text-xl font-bold text-white mb-4">Per-Round Breakdown</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead id="breakdown-head">
+                        <tr class="border-b border-blue-500/20 text-blue-300 uppercase tracking-wide">
+                            <th class="py-3 px-3 text-left">Name</th>
+                        </tr>
+                    </thead>
+                    <tbody id="breakdown-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center text-blue-400/50 text-sm py-8">
+        BluWave-ai Peak Load Prediction Game &#9889;
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const data = await API.getLeaderboard();
+            renderLeaderboard(data);
+        } catch (e) {
+            document.getElementById('leaderboard-body').innerHTML =
+                '<tr><td colspan="4" class="py-10 text-center text-red-400">Could not connect to backend. Configure your API URL in js/config.js</td></tr>';
+        }
+    });
+
+    function getRankBadge(rank) {
+        if (rank === 1) return '<span class="inline-flex items-center justify-center w-8 h-8 rounded-full podium-1 text-white font-bold text-sm glow-gold">1</span>';
+        if (rank === 2) return '<span class="inline-flex items-center justify-center w-8 h-8 rounded-full podium-2 text-white font-bold text-sm">2</span>';
+        if (rank === 3) return '<span class="inline-flex items-center justify-center w-8 h-8 rounded-full podium-3 text-white font-bold text-sm">3</span>';
+        return `<span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/10 text-blue-300 font-semibold text-sm">${rank}</span>`;
+    }
+
+    function renderLeaderboard(data) {
+        const { leaderboard, rounds } = data;
+
+        if (!leaderboard || leaderboard.length === 0) {
+            document.getElementById('leaderboard-body').innerHTML =
+                '<tr><td colspan="4" class="py-10 text-center text-blue-400/50">No scored rounds yet. Check back after results are posted!</td></tr>';
+            return;
+        }
+
+        // Rounds info
+        document.getElementById('rounds-info').classList.remove('hidden');
+        document.getElementById('rounds-count').textContent = rounds.length;
+
+        // Main leaderboard
+        const tbody = document.getElementById('leaderboard-body');
+        tbody.innerHTML = '';
+
+        leaderboard.forEach((player, i) => {
+            const rank = i + 1;
+            const rowClass = rank <= 3 ? 'bg-bw-accent/5' : '';
+            const nameClass = rank === 1 ? 'text-yellow-300' : 'text-white';
+            const devColor = player.totalDeviation < 1 ? 'text-emerald-400' : player.totalDeviation < 2 ? 'text-yellow-400' : 'text-red-400';
+
+            const tr = document.createElement('tr');
+            tr.className = `border-b border-blue-500/10 hover:bg-white/5 transition-colors animate-row ${rowClass}`;
+            tr.style.animationDelay = `${i * 0.05}s`;
+            tr.innerHTML = `
+                <td class="py-4 px-5">${getRankBadge(rank)}</td>
+                <td class="py-4 px-5 font-semibold ${nameClass}">${player.name}</td>
+                <td class="py-4 px-5 text-right text-blue-300">${player.roundCount}</td>
+                <td class="py-4 px-5 text-right font-mono font-bold ${devColor}">${player.totalDeviation.toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Per-round breakdown
+        if (rounds.length > 0) {
+            renderBreakdown(leaderboard, rounds);
+        }
+    }
+
+    function renderBreakdown(leaderboard, rounds) {
+        document.getElementById('breakdown-section').classList.remove('hidden');
+
+        const thead = document.getElementById('breakdown-head').querySelector('tr');
+        // Add round columns
+        rounds.forEach(r => {
+            const th = document.createElement('th');
+            const date = new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            th.className = 'py-3 px-3 text-right';
+            th.textContent = date;
+            thead.appendChild(th);
+        });
+        const totalTh = document.createElement('th');
+        totalTh.className = 'py-3 px-3 text-right';
+        totalTh.textContent = 'Total';
+        thead.appendChild(totalTh);
+
+        const tbody = document.getElementById('breakdown-body');
+        tbody.innerHTML = '';
+
+        leaderboard.forEach(player => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-blue-500/10';
+            let cells = `<td class="py-2 px-3 font-semibold text-white">${player.name}</td>`;
+
+            rounds.forEach(r => {
+                const dev = player.perRound[r.roundId];
+                const val = dev !== undefined ? dev.toFixed(2) : '—';
+                const color = dev !== undefined
+                    ? (dev < 0.3 ? 'text-emerald-400' : dev < 0.7 ? 'text-yellow-400' : 'text-red-400')
+                    : 'text-blue-400/30';
+                cells += `<td class="py-2 px-3 text-right font-mono ${color}">${val}</td>`;
+            });
+
+            cells += `<td class="py-2 px-3 text-right font-mono font-bold text-bw-accent">${player.totalDeviation.toFixed(2)}</td>`;
+            tr.innerHTML = cells;
+            tbody.appendChild(tr);
+        });
+    }
+    </script>
+</body>
+</html>

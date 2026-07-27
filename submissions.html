@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submissions | Peak Load Prediction</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bw: { dark: '#0a1628', blue: '#0066cc', accent: '#00a3ff', light: '#e6f4ff', navy: '#0d2137' }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-bw-dark min-h-screen text-white" style="font-family: 'Inter', sans-serif;">
+
+    <!-- Navigation -->
+    <nav class="bg-black/30 backdrop-blur-md border-b border-bw-blue/30 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-2">
+                <img src="BW_assets/BluWave-ai_Logo_-_White_Text,_Blue_Background-qde51.webp" alt="BluWave-ai" class="h-8 rounded">
+                <span class="font-bold text-lg text-bw-accent">Peak Load</span>
+            </a>
+            <div class="flex gap-4 text-sm">
+                <a href="index.html" class="hover:text-bw-accent transition">Predict</a>
+                <a href="submissions.html" class="text-bw-accent font-semibold">Submissions</a>
+                <a href="leaderboard.html" class="hover:text-bw-accent transition">Leaderboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto px-4 py-10">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold bg-gradient-to-r from-bw-accent to-cyan-300 bg-clip-text text-transparent">
+                Submissions
+            </h1>
+            <p class="text-blue-300/70 mt-2">See who has submitted their prediction</p>
+        </div>
+
+        <!-- Round Selector -->
+        <div class="flex justify-center mb-6">
+            <select id="round-select" onchange="loadSubmissions()"
+                class="bg-white/5 border border-blue-500/20 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-bw-accent">
+                <option value="">Loading rounds...</option>
+            </select>
+        </div>
+
+        <!-- Round Info -->
+        <div id="round-info-card" class="hidden mb-6 bg-white/5 border border-blue-500/20 rounded-xl p-4 text-center">
+            <div class="flex flex-wrap justify-center gap-6 text-sm">
+                <div>
+                    <span class="text-blue-400">Date:</span>
+                    <span id="round-date" class="text-white font-semibold ml-1"></span>
+                </div>
+                <div>
+                    <span class="text-blue-400">Deadline:</span>
+                    <span id="round-deadline" class="text-white font-semibold ml-1"></span>
+                </div>
+                <div>
+                    <span class="text-blue-400">Actual:</span>
+                    <span id="round-actual" class="text-emerald-300 font-bold ml-1"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Badge -->
+        <div id="status-badge" class="hidden text-center mb-6">
+            <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium"></span>
+        </div>
+
+        <!-- Submissions Table -->
+        <div class="bg-white/5 border border-blue-500/20 rounded-xl overflow-hidden">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-blue-500/20 text-blue-300 text-sm uppercase tracking-wide">
+                        <th class="py-4 px-5 text-left">#</th>
+                        <th class="py-4 px-5 text-left">Name</th>
+                        <th class="py-4 px-5 text-right">Prediction</th>
+                        <th class="py-4 px-5 text-right">Deviation</th>
+                    </tr>
+                </thead>
+                <tbody id="submissions-body">
+                    <tr><td colspan="4" class="py-10 text-center text-blue-400/50">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Legend -->
+        <div class="mt-4 text-xs text-blue-400/50 text-center">
+            <span class="inline-flex items-center gap-1">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                = Prediction hidden until deadline passes
+            </span>
+        </div>
+    </div>
+
+    <footer class="text-center text-blue-400/50 text-sm py-8">
+        BluWave-ai Peak Load Prediction Game &#9889;
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+    let allRounds = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const data = await API.getRounds();
+            allRounds = data.rounds || [];
+            populateRoundSelect();
+            loadSubmissions();
+        } catch (e) {
+            document.getElementById('submissions-body').innerHTML =
+                '<tr><td colspan="4" class="py-10 text-center text-red-400">Could not connect to backend. Configure your API URL in js/config.js</td></tr>';
+        }
+    });
+
+    function populateRoundSelect() {
+        const select = document.getElementById('round-select');
+        select.innerHTML = '';
+        // Show rounds in reverse order (newest first)
+        const sorted = [...allRounds].reverse();
+        sorted.forEach(r => {
+            const date = new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const opt = document.createElement('option');
+            opt.value = r.roundId;
+            opt.textContent = `${date}${r.isActive ? ' (Active)' : ''}`;
+            if (r.isActive) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    async function loadSubmissions() {
+        const roundId = document.getElementById('round-select').value;
+        if (!roundId) return;
+
+        const tbody = document.getElementById('submissions-body');
+        tbody.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-blue-400/50">Loading...</td></tr>';
+
+        try {
+            const data = await API.getSubmissions(roundId);
+            renderSubmissions(data);
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-red-400">Error loading submissions</td></tr>';
+        }
+    }
+
+    function renderSubmissions(data) {
+        const { submissions, isDeadlinePassed, actualValue, deadline, date } = data;
+
+        // Round info
+        const infoCard = document.getElementById('round-info-card');
+        infoCard.classList.remove('hidden');
+        document.getElementById('round-date').textContent = date
+            ? new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+            : '—';
+        document.getElementById('round-deadline').textContent = deadline
+            ? new Date(deadline).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+            : '—';
+        document.getElementById('round-actual').textContent = actualValue !== null ? `${actualValue.toFixed(2)} GW` : 'TBD';
+
+        // Status badge
+        const badge = document.getElementById('status-badge');
+        badge.classList.remove('hidden');
+        const badgeSpan = badge.querySelector('span');
+        if (isDeadlinePassed) {
+            badgeSpan.className = 'inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/30';
+            badgeSpan.textContent = 'Predictions Revealed';
+        } else {
+            badgeSpan.className = 'inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium bg-yellow-500/10 text-yellow-300 border border-yellow-500/30';
+            badgeSpan.textContent = 'Submissions Open — Predictions Locked';
+        }
+
+        // Table
+        const tbody = document.getElementById('submissions-body');
+        if (submissions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-blue-400/50">No submissions yet</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        submissions.forEach((sub, i) => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-blue-500/10 hover:bg-white/5 transition-colors';
+
+            let predDisplay, devDisplay;
+
+            if (isDeadlinePassed && sub.prediction !== null) {
+                predDisplay = `<span class="font-mono text-blue-300">${sub.prediction.toFixed(2)} GW</span>`;
+                if (actualValue !== null) {
+                    const dev = Math.abs(sub.prediction - actualValue);
+                    const devColor = dev < 0.3 ? 'text-emerald-400' : dev < 0.7 ? 'text-yellow-400' : 'text-red-400';
+                    devDisplay = `<span class="font-mono ${devColor}">${dev.toFixed(2)}</span>`;
+                } else {
+                    devDisplay = '<span class="text-blue-400/50">—</span>';
+                }
+            } else {
+                predDisplay = `<span class="inline-flex items-center gap-1 text-blue-400/50">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                    Hidden</span>`;
+                devDisplay = '<span class="text-blue-400/50">—</span>';
+            }
+
+            tr.innerHTML = `
+                <td class="py-3 px-5 text-blue-400/70">${i + 1}</td>
+                <td class="py-3 px-5 font-semibold text-white">${sub.name}</td>
+                <td class="py-3 px-5 text-right">${predDisplay}</td>
+                <td class="py-3 px-5 text-right">${devDisplay}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Make loadSubmissions available globally
+    window.loadSubmissions = loadSubmissions;
+    </script>
+</body>
+</html>
