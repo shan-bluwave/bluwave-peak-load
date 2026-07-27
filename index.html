@@ -185,24 +185,20 @@
                         </div>
                     </div>
 
-                    <!-- Submit Button -->
-                    <button id="submit-btn" onclick="submitPrediction()"
-                        class="w-full bg-gradient-to-r from-bw-blue to-bw-accent text-white font-bold py-4 rounded-xl text-lg hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg shadow-bw-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
-                        Submit Prediction
-                    </button>
-                </div>
-
-                <!-- Confirmation Card -->
-                <div id="confirmation-card" class="hidden mt-6 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6 text-center pop-in">
-                    <div class="text-4xl mb-3">&#9889;</div>
-                    <h3 class="text-xl font-bold text-emerald-300 mb-2">Prediction Submitted!</h3>
-                    <p id="confirmation-text" class="text-blue-200/80"></p>
-                </div>
-
-                <!-- Error Card -->
-                <div id="error-card" class="hidden mt-6 bg-red-500/10 border border-red-500/30 rounded-2xl p-4 text-center">
-                    <p id="error-text" class="text-red-300"></p>
-                </div>
+                    <!-- Submit Button + Inline Feedback -->
+                    <div class="flex items-center gap-4">
+                        <button id="submit-btn" onclick="submitPrediction()"
+                            class="flex-shrink-0 bg-gradient-to-r from-bw-blue to-bw-accent text-white font-bold py-4 px-8 rounded-xl text-lg hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg shadow-bw-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
+                            Submit Prediction
+                        </button>
+                        <div id="confirmation-card" class="hidden flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3 pop-in">
+                            <span class="text-xl">&#9889;</span>
+                            <p id="confirmation-text" class="text-emerald-300 text-sm font-medium"></p>
+                        </div>
+                        <div id="error-card" class="hidden flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+                            <p id="error-text" class="text-red-300 text-sm"></p>
+                        </div>
+                    </div>
 
             </div>
         </div>
