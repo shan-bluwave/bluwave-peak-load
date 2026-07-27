@@ -166,19 +166,23 @@
 
         if (now > deadline) {
             document.getElementById('deadline-passed-banner').classList.remove('hidden');
-            document.getElementById('prediction-card').classList.add('opacity-50', 'pointer-events-none');
+            document.getElementById('prediction-card').classList.add('opacity-50');
             document.getElementById('submit-btn').disabled = true;
+            slider.disabled = true;
+            loadUserSubmission(round.roundId);
             return;
         }
 
         // Start countdown
         startCountdown(deadline);
+        loadUserSubmission(round.roundId);
     }
 
     function showNoActiveRound() {
         document.getElementById('no-round-banner').classList.remove('hidden');
-        document.getElementById('prediction-card').classList.add('opacity-50', 'pointer-events-none');
+        document.getElementById('prediction-card').classList.add('opacity-50');
         document.getElementById('submit-btn').disabled = true;
+        slider.disabled = true;
         document.getElementById('round-info').classList.add('hidden');
     }
 
@@ -202,6 +206,35 @@
         countdownInterval = setInterval(update, 1000);
     }
 
+    /* ---- Load Existing Submission ---- */
+
+    /**
+     * Fetches the current user's submission for the given round and
+     * permanently displays it so users always know what they submitted.
+     */
+    async function loadUserSubmission(roundId) {
+        try {
+            const data = await API.getSubmissions(roundId);
+            const mySubmission = data.submissions.find(
+                s => s.name.toLowerCase() === currentUser.toLowerCase()
+            );
+            if (mySubmission) {
+                const confirmEl = document.getElementById('confirmation-text');
+                if (mySubmission.prediction !== null) {
+                    // Deadline passed — API reveals the value
+                    confirmEl.textContent = `\u26A1 Your prediction: ${parseFloat(mySubmission.prediction).toFixed(2)} GW`;
+                } else {
+                    // Before deadline — API hides value, but confirm they submitted
+                    confirmEl.textContent = `\u26A1 You've already submitted for this round. You can still update it.`;
+                }
+                confirmEl.classList.remove('hidden');
+                document.getElementById('submit-btn').textContent = 'Update Prediction';
+            }
+        } catch (e) {
+            // Non-critical — silently ignore if fetch fails
+        }
+    }
+
     /* ---- Submit Prediction ---- */
 
     window.submitPrediction = async function () {
@@ -212,7 +245,6 @@
 
         submitBtn.disabled = true;
         submitBtn.textContent = 'Submitting...';
-        confirmEl.classList.add('hidden');
         errorEl.classList.add('hidden');
 
         try {
@@ -220,14 +252,14 @@
             const result = await API.submitPrediction(currentUser, roundId, value);
 
             if (result.success) {
-                confirmEl.textContent = `\u26A1 ${currentUser}, you predicted ${value} GW. ${result.message}`;
+                confirmEl.textContent = `\u26A1 Your current prediction: ${value} GW`;
                 confirmEl.classList.remove('hidden');
             } else {
                 errorEl.textContent = result.message || 'Submission failed.';
                 errorEl.classList.remove('hidden');
             }
         } catch (e) {
-            confirmEl.textContent = `\u26A1 ${currentUser}, you predicted ${value} GW. (Saved locally)`;
+            confirmEl.textContent = `\u26A1 Your current prediction: ${value} GW (saved locally)`;
             confirmEl.classList.remove('hidden');
             console.log('Local submission:', { name: currentUser, prediction: value });
         }
