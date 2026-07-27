@@ -224,8 +224,13 @@
                     // Deadline passed — API reveals the value
                     confirmEl.textContent = `\u26A1 Your prediction: ${parseFloat(mySubmission.prediction).toFixed(2)} GW`;
                 } else {
-                    // Before deadline — API hides value, but confirm they submitted
-                    confirmEl.textContent = `\u26A1 You've already submitted for this round. You can still update it.`;
+                    // Before deadline — API hides value; fall back to localStorage
+                    const savedValue = localStorage.getItem(`peakload_pred_${roundId}`);
+                    if (savedValue) {
+                        confirmEl.textContent = `\u26A1 Your current prediction: ${savedValue} GW. You can still update it.`;
+                    } else {
+                        confirmEl.textContent = `\u26A1 You've already submitted for this round. You can still update it.`;
+                    }
                 }
                 confirmEl.classList.remove('hidden');
                 document.getElementById('submit-btn').textContent = 'Update Prediction';
@@ -252,6 +257,7 @@
             const result = await API.submitPrediction(currentUser, roundId, value);
 
             if (result.success) {
+                localStorage.setItem(`peakload_pred_${roundId}`, value);
                 confirmEl.textContent = `\u26A1 Your current prediction: ${value} GW`;
                 confirmEl.classList.remove('hidden');
             } else {
