@@ -207,46 +207,34 @@
     window.submitPrediction = async function () {
         const value = parseFloat(slider.value).toFixed(2);
         const submitBtn = document.getElementById('submit-btn');
+        const confirmEl = document.getElementById('confirmation-text');
+        const errorEl = document.getElementById('error-text');
+
         submitBtn.disabled = true;
         submitBtn.textContent = 'Submitting...';
+        confirmEl.classList.add('hidden');
+        errorEl.classList.add('hidden');
 
         try {
             const roundId = activeRound ? activeRound.roundId : 'local';
             const result = await API.submitPrediction(currentUser, roundId, value);
 
             if (result.success) {
-                showConfirmation(`${currentUser}, you predicted ${value} GW. ${result.message}`);
-                // Re-enable form so user can change their mind before deadline
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Update Prediction';
+                confirmEl.textContent = `\u26A1 ${currentUser}, you predicted ${value} GW. ${result.message}`;
+                confirmEl.classList.remove('hidden');
             } else {
-                showError(result.message || 'Submission failed.');
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Prediction';
+                errorEl.textContent = result.message || 'Submission failed.';
+                errorEl.classList.remove('hidden');
             }
         } catch (e) {
-            // Offline/local mode fallback
-            showConfirmation(`${currentUser}, you predicted ${value} GW. (Saved locally — API not connected)`);
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Update Prediction';
+            confirmEl.textContent = `\u26A1 ${currentUser}, you predicted ${value} GW. (Saved locally)`;
+            confirmEl.classList.remove('hidden');
             console.log('Local submission:', { name: currentUser, prediction: value });
         }
+
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Update Prediction';
     };
-
-    function showConfirmation(message) {
-        const card = document.getElementById('confirmation-card');
-        card.classList.remove('hidden');
-        document.getElementById('confirmation-text').textContent = message;
-        // Auto-hide after 5 seconds so the form stays usable
-        setTimeout(() => card.classList.add('hidden'), 5000);
-    }
-
-    function showError(message) {
-        const errorCard = document.getElementById('error-card');
-        document.getElementById('error-text').textContent = message;
-        errorCard.classList.remove('hidden');
-        setTimeout(() => errorCard.classList.add('hidden'), 5000);
-    }
 
     /* ---- Slider Event Binding ---- */
     slider.addEventListener('input', updateScene);
