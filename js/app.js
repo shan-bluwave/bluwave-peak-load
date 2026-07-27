@@ -239,6 +239,59 @@
     /* ---- Slider Event Binding ---- */
     slider.addEventListener('input', updateScene);
 
+    /* ---- Click-to-Type Value Input ---- */
+
+    const sliderValueInput = document.getElementById('slider-value-input');
+
+    /**
+     * Validates typed input matches xx.xx format and is within slider bounds.
+     * @param {string} raw - The raw input string.
+     * @returns {number|null} Parsed value if valid, null otherwise.
+     */
+    function parseTypedValue(raw) {
+        const trimmed = raw.trim();
+        if (!/^\d{2}\.\d{2}$/.test(trimmed)) return null;
+        const parsed = parseFloat(trimmed);
+        if (parsed < SLIDER_MIN || parsed > SLIDER_MAX) return null;
+        return parsed;
+    }
+
+    /** Shows the text input and hides the display span. */
+    function enterEditMode() {
+        sliderValueDisplay.classList.add('hidden');
+        sliderValueInput.classList.remove('hidden');
+        sliderValueInput.value = slider.value ? parseFloat(slider.value).toFixed(2) : '20.00';
+        sliderValueInput.focus();
+        sliderValueInput.select();
+    }
+
+    /** Hides the text input and shows the display span. Syncs valid input to slider. */
+    function exitEditMode() {
+        const parsed = parseTypedValue(sliderValueInput.value);
+        if (parsed !== null) {
+            slider.value = parsed;
+            updateScene();
+        }
+        sliderValueInput.classList.add('hidden');
+        sliderValueDisplay.classList.remove('hidden');
+    }
+
+    sliderValueDisplay.addEventListener('click', enterEditMode);
+
+    sliderValueInput.addEventListener('blur', exitEditMode);
+
+    sliderValueInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sliderValueInput.blur();
+        }
+        if (e.key === 'Escape') {
+            // Revert without applying changes
+            sliderValueInput.value = parseFloat(slider.value).toFixed(2);
+            sliderValueInput.blur();
+        }
+    });
+
     /* ---- Initialization ---- */
 
     // Auto-login if user already stored; otherwise wait for doLogin
