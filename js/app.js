@@ -215,10 +215,10 @@
             const result = await API.submitPrediction(currentUser, roundId, value);
 
             if (result.success) {
-                document.getElementById('confirmation-card').classList.remove('hidden');
-                document.getElementById('confirmation-text').textContent =
-                    `${currentUser}, you predicted ${value} GW. ${result.message}`;
-                document.getElementById('prediction-card').classList.add('opacity-50', 'pointer-events-none');
+                showConfirmation(`${currentUser}, you predicted ${value} GW. ${result.message}`);
+                // Re-enable form so user can change their mind before deadline
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Update Prediction';
             } else {
                 showError(result.message || 'Submission failed.');
                 submitBtn.disabled = false;
@@ -226,13 +226,20 @@
             }
         } catch (e) {
             // Offline/local mode fallback
-            document.getElementById('confirmation-card').classList.remove('hidden');
-            document.getElementById('confirmation-text').textContent =
-                `${currentUser}, you predicted ${value} GW. (Saved locally — API not connected)`;
-            document.getElementById('prediction-card').classList.add('opacity-50', 'pointer-events-none');
+            showConfirmation(`${currentUser}, you predicted ${value} GW. (Saved locally — API not connected)`);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Update Prediction';
             console.log('Local submission:', { name: currentUser, prediction: value });
         }
     };
+
+    function showConfirmation(message) {
+        const card = document.getElementById('confirmation-card');
+        card.classList.remove('hidden');
+        document.getElementById('confirmation-text').textContent = message;
+        // Auto-hide after 5 seconds so the form stays usable
+        setTimeout(() => card.classList.add('hidden'), 5000);
+    }
 
     function showError(message) {
         const errorCard = document.getElementById('error-card');
