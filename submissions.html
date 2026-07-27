@@ -89,7 +89,7 @@
                     </tr>
                 </thead>
                 <tbody id="submissions-body">
-                    <tr><td colspan="4" class="py-10 text-center text-blue-400/50">Loading...</td></tr>
+                    <tr><td colspan="4" class="py-10 text-center"><span class="loading-battery">&#128267;</span><p class="text-blue-400/50 text-sm mt-2">Loading...</p></td></tr>
                 </tbody>
             </table>
         </div>
@@ -144,7 +144,7 @@
         if (!roundId) return;
 
         const tbody = document.getElementById('submissions-body');
-        tbody.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-blue-400/50">Loading...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="py-10 text-center"><span class="loading-battery">&#128267;</span><p class="text-blue-400/50 text-sm mt-2">Loading...</p></td></tr>';
 
         try {
             const data = await API.getSubmissions(roundId);

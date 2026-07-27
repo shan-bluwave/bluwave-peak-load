@@ -163,3 +163,17 @@ body {
     50%      { transform: translateX(3px) rotate(3deg); }
     75%      { transform: translateX(-2px) rotate(-2deg); }
 }
+
+/* --------------------------------------------------------
+   Loading spinner — bouncing battery emoji
+   -------------------------------------------------------- */
+@keyframes battery-bounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-16px); }
+}
+
+.loading-battery {
+    display: inline-block;
+    font-size: 2.5rem;
+    animation: battery-bounce 0.8s ease-in-out infinite;
+}
