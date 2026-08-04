@@ -240,17 +240,21 @@ function getLeaderboard() {
     players[name].roundCount++;
   }
 
-  // Round total deviation
+  // Calculate average deviation and qualification status
+  const totalScoredRounds = scoredRounds.length;
+  const minParticipation = Math.ceil(totalScoredRounds * 0.5); // 50% threshold
+
   Object.values(players).forEach(p => {
     p.totalDeviation = Math.round(p.totalDeviation * 100) / 100;
+    p.avgDeviation = Math.round((p.totalDeviation / p.roundCount) * 100) / 100;
+    p.qualified = p.roundCount >= minParticipation;
   });
 
-  // Sort: most rounds played first, then lowest total deviation.
-  // Ensures participants in all rounds rank above cherry-pickers.
+  // Sort: qualified players first (by avg deviation), then unqualified (by avg deviation)
   const leaderboard = Object.values(players).sort((a, b) => {
-    if (a.roundCount !== b.roundCount) return b.roundCount - a.roundCount;
-    return a.totalDeviation - b.totalDeviation;
+    if (a.qualified !== b.qualified) return a.qualified ? -1 : 1;
+    return a.avgDeviation - b.avgDeviation;
   });
 
-  return { leaderboard, rounds: scoredRounds };
+  return { leaderboard, rounds: scoredRounds, minParticipation };
 }

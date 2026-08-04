@@ -54,7 +54,7 @@
             <h1 class="text-3xl font-extrabold bg-gradient-to-r from-bw-accent to-cyan-300 bg-clip-text text-transparent">
                 Leaderboard
             </h1>
-            <p class="text-blue-300/70 mt-2">Lowest cumulative deviation wins!</p>
+            <p class="text-blue-300/70 mt-2">Lowest average deviation wins!</p>
         </div>
 
         <!-- Rounds Played -->
@@ -72,11 +72,11 @@
                         <th class="py-4 px-5 text-left">Rank</th>
                         <th class="py-4 px-5 text-left">Name</th>
                         <th class="py-4 px-5 text-right">Rounds</th>
-                        <th class="py-4 px-5 text-right">Total Deviation</th>
+                        <th class="py-4 px-5 text-right">Avg Deviation</th>
                     </tr>
                 </thead>
                 <tbody id="leaderboard-body">
-                    <tr><td colspan="4" class="py-10 text-center"><span class="loading-battery">&#128267;</span><p class="text-blue-400/50 text-sm mt-2">Loading...</p></td></tr>
+                    <tr><td colspan="5" class="py-10 text-center"><span class="loading-battery">&#128267;</span><p class="text-blue-400/50 text-sm mt-2">Loading...</p></td></tr>
                 </tbody>
             </table>
         </div>
@@ -86,9 +86,9 @@
             <p class="font-semibold text-blue-200 mb-2">Scoring</p>
             <ul class="list-disc list-inside space-y-1">
                 <li><strong>Deviation</strong> = |Your Prediction - Actual Peak Load|</li>
-                <li><strong>Total Deviation</strong> = Sum of deviations across all rounds</li>
-                <li><strong>Most rounds participated ranks first</strong></li>
-                <li>Among equal participation, lowest total deviation wins</li>
+                <li><strong>Avg Deviation</strong> = Total Deviation / Rounds Played</li>
+                <li><strong>Qualification</strong> = Must participate in at least 50% of scored rounds</li>
+                <li>Qualified players ranked first, then unqualified — both sorted by lowest avg deviation</li>
             </ul>
         </div>
 
@@ -133,11 +133,11 @@
     }
 
     function renderLeaderboard(data) {
-        const { leaderboard, rounds } = data;
+        const { leaderboard, rounds, minParticipation } = data;
 
         if (!leaderboard || leaderboard.length === 0) {
             document.getElementById('leaderboard-body').innerHTML =
-                '<tr><td colspan="4" class="py-10 text-center text-blue-400/50">No scored rounds yet. Check back after results are posted!</td></tr>';
+                '<tr><td colspan="5" class="py-10 text-center text-blue-400/50">No scored rounds yet. Check back after results are posted!</td></tr>';
             return;
         }
 
@@ -149,20 +149,39 @@
         const tbody = document.getElementById('leaderboard-body');
         tbody.innerHTML = '';
 
+        let qualifiedRank = 0;
+        let unqualifiedStarted = false;
+
         leaderboard.forEach((player, i) => {
-            const rank = i + 1;
-            const rowClass = rank <= 3 ? 'bg-bw-accent/5' : '';
+            // Insert separator between qualified and unqualified
+            if (!player.qualified && !unqualifiedStarted) {
+                unqualifiedStarted = true;
+                const sep = document.createElement('tr');
+                sep.innerHTML = `<td colspan="4" class="py-3 px-5 text-xs text-blue-400/60 uppercase tracking-wider bg-white/[0.02] border-y border-blue-500/20">Below qualification threshold (min ${minParticipation} rounds)</td>`;
+                tbody.appendChild(sep);
+            }
+
+            let rank;
+            if (player.qualified) {
+                qualifiedRank++;
+                rank = qualifiedRank;
+            } else {
+                rank = '—';
+            }
+
+            const rowClass = player.qualified && rank <= 3 ? 'bg-bw-accent/5' : (!player.qualified ? 'opacity-60' : '');
             const nameClass = rank === 1 ? 'text-yellow-300' : 'text-white';
-            const devColor = player.totalDeviation < 1 ? 'text-emerald-400' : player.totalDeviation < 2 ? 'text-yellow-400' : 'text-red-400';
+            const avgDev = player.avgDeviation;
+            const devColor = avgDev < 0.5 ? 'text-emerald-400' : avgDev < 1 ? 'text-yellow-400' : 'text-red-400';
 
             const tr = document.createElement('tr');
             tr.className = `border-b border-blue-500/10 hover:bg-white/5 transition-colors animate-row ${rowClass}`;
             tr.style.animationDelay = `${i * 0.05}s`;
             tr.innerHTML = `
-                <td class="py-4 px-5">${getRankBadge(rank)}</td>
+                <td class="py-4 px-5">${player.qualified ? getRankBadge(rank) : '<span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/5 text-blue-400/40 font-semibold text-sm">—</span>'}</td>
                 <td class="py-4 px-5 font-semibold ${nameClass}">${player.name}</td>
-                <td class="py-4 px-5 text-right text-blue-300">${player.roundCount}</td>
-                <td class="py-4 px-5 text-right font-mono font-bold ${devColor}">${player.totalDeviation.toFixed(2)}</td>
+                <td class="py-4 px-5 text-right text-blue-300">${player.roundCount}/${rounds.length}</td>
+                <td class="py-4 px-5 text-right font-mono font-bold ${devColor}">${avgDev.toFixed(2)}</td>
             `;
             tbody.appendChild(tr);
         });
