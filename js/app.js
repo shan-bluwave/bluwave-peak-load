@@ -139,19 +139,35 @@
     /* ---- Round Loading ---- */
 
     async function loadActiveRound() {
+        // Instantly show cached round while API fetches in background
+        const cached = localStorage.getItem('peakload_activeRound');
+        if (cached) {
+            try {
+                const cachedRound = JSON.parse(cached);
+                activeRound = cachedRound;
+                displayRoundInfo(cachedRound);
+            } catch (e) { /* corrupt cache, ignore */ }
+        }
+
         try {
             const data = await API.getActiveRound();
             if (data.activeRound) {
+                // Only re-render if round changed from cached version
+                const isNew = !cached || JSON.stringify(data.activeRound) !== cached;
                 activeRound = data.activeRound;
-                displayRoundInfo(activeRound);
+                localStorage.setItem('peakload_activeRound', JSON.stringify(data.activeRound));
+                if (isNew) displayRoundInfo(activeRound);
             } else {
-                showNoActiveRound();
+                localStorage.removeItem('peakload_activeRound');
+                if (!cached) showNoActiveRound();
             }
         } catch (e) {
-            // Fallback if API not configured yet — show prediction form with today's date
-            const today = new Date();
-            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('prediction-date').textContent = today.toLocaleDateString('en-US', dateOptions);
+            // API failed — if we already showed cached data, that's fine
+            if (!cached) {
+                const today = new Date();
+                const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                document.getElementById('prediction-date').textContent = today.toLocaleDateString('en-US', dateOptions);
+            }
         }
     }
 
@@ -253,36 +269,31 @@
         const submitBtn = document.getElementById('submit-btn');
         const confirmEl = document.getElementById('confirmation-text');
         const errorEl = document.getElementById('error-text');
+        const roundId = activeRound ? activeRound.roundId : 'local';
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting...';
+        // Optimistic: immediately show success and save locally
         errorEl.classList.add('hidden');
+        localStorage.setItem(`peakload_pred_${roundId}`, value);
+        confirmEl.textContent = `\u26A1 Your current prediction: ${value} GW`;
+        confirmEl.classList.remove('hidden');
+        showToast('Prediction submitted!', 'success');
+        submitBtn.textContent = 'Update Prediction';
 
+        // Fire API in background — no blocking
         try {
-            const roundId = activeRound ? activeRound.roundId : 'local';
             const result = await API.submitPrediction(currentUser, roundId, value);
 
-            if (result.success) {
-                localStorage.setItem(`peakload_pred_${roundId}`, value);
-                confirmEl.textContent = `\u26A1 Your current prediction: ${value} GW`;
-                confirmEl.classList.remove('hidden');
-                showToast('Prediction submitted!', 'success');
-            } else {
+            if (!result.success) {
                 const msg = result.message || result.error || 'Submission failed.';
                 errorEl.textContent = msg;
                 errorEl.classList.remove('hidden');
                 showToast(msg, 'error');
             }
         } catch (e) {
-            localStorage.setItem(`peakload_pred_${activeRound ? activeRound.roundId : 'local'}`, value);
-            confirmEl.textContent = `\u26A1 Your current prediction: ${value} GW (saved locally)`;
-            confirmEl.classList.remove('hidden');
-            showToast('Saved locally — will sync when connection resumes.', 'warning');
-            console.log('Local submission:', { name: currentUser, prediction: value });
+            // API unreachable — local save already done, warn user
+            showToast('Saved locally — syncing when connection resumes.', 'warning');
+            console.log('API unreachable, local save:', { name: currentUser, prediction: value });
         }
-
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Update Prediction';
     };
 
     function showToast(message, type) {
