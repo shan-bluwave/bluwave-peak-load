@@ -260,19 +260,54 @@
                 localStorage.setItem(`peakload_pred_${roundId}`, value);
                 confirmEl.textContent = `\u26A1 Your current prediction: ${value} GW`;
                 confirmEl.classList.remove('hidden');
+                showToast('Prediction submitted!', 'success');
             } else {
-                errorEl.textContent = result.message || 'Submission failed.';
+                const msg = result.message || result.error || 'Submission failed.';
+                errorEl.textContent = msg;
                 errorEl.classList.remove('hidden');
+                showToast(msg, 'error');
             }
         } catch (e) {
+            localStorage.setItem(`peakload_pred_${activeRound ? activeRound.roundId : 'local'}`, value);
             confirmEl.textContent = `\u26A1 Your current prediction: ${value} GW (saved locally)`;
             confirmEl.classList.remove('hidden');
+            showToast('Saved locally — will sync when connection resumes.', 'warning');
             console.log('Local submission:', { name: currentUser, prediction: value });
         }
 
         submitBtn.disabled = false;
         submitBtn.textContent = 'Update Prediction';
     };
+
+    function showToast(message, type) {
+        const existing = document.getElementById('toast-notification');
+        if (existing) existing.remove();
+
+        const colors = {
+            success: 'bg-emerald-500/90 border-emerald-400',
+            error: 'bg-red-500/90 border-red-400',
+            warning: 'bg-yellow-500/90 border-yellow-400 text-black'
+        };
+
+        const toast = document.createElement('div');
+        toast.id = 'toast-notification';
+        toast.className = `fixed top-6 right-6 z-[999] px-5 py-3 rounded-xl border text-sm font-semibold text-white shadow-lg transition-all duration-300 ${colors[type] || colors.success}`;
+        toast.textContent = message;
+        toast.style.transform = 'translateY(-20px)';
+        toast.style.opacity = '0';
+        document.body.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.style.transform = 'translateY(0)';
+            toast.style.opacity = '1';
+        });
+
+        setTimeout(() => {
+            toast.style.transform = 'translateY(-20px)';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
 
     /* ---- Slider Event Binding ---- */
     slider.addEventListener('input', updateScene);

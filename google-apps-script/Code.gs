@@ -124,7 +124,7 @@ function submitPrediction(userName, roundId, prediction) {
 
   // Validate round exists and deadline hasn't passed
   const { rounds } = getRounds();
-  const round = rounds.find(r => r.roundId === roundId);
+  const round = rounds.find(r => r.roundId.toString() === roundId.toString());
 
   if (!round) {
     return { success: false, message: 'Round not found.' };
@@ -148,7 +148,7 @@ function submitPrediction(userName, roundId, prediction) {
 
   // Check if user already submitted for this round — update if so
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === userName && data[i][1] === roundId) {
+    if (data[i][0] === userName && data[i][1].toString() === roundId.toString()) {
       sheet.getRange(i + 1, 3).setValue(predValue);
       sheet.getRange(i + 1, 4).setValue(now.toISOString());
       return { success: true, message: 'Prediction updated!' };
@@ -168,12 +168,12 @@ function getSubmissions(roundId) {
 
   // Get round info to check deadline
   const { rounds } = getRounds();
-  const round = rounds.find(r => r.roundId === roundId);
+  const round = rounds.find(r => r.roundId.toString() === roundId.toString());
   const isDeadlinePassed = round && round.deadline && now > new Date(round.deadline);
 
   const submissions = [];
   for (let i = 1; i < data.length; i++) {
-    if (data[i][1] === roundId) {
+    if (data[i][1].toString() === roundId.toString()) {
       submissions.push({
         name: data[i][0],
         prediction: isDeadlinePassed ? parseFloat(data[i][2]) : null,
