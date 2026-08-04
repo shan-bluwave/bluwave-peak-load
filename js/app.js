@@ -213,30 +213,36 @@
      * permanently displays it so users always know what they submitted.
      */
     async function loadUserSubmission(roundId) {
+        const confirmEl = document.getElementById('confirmation-text');
+        const savedValue = localStorage.getItem(`peakload_pred_${roundId}`);
+
+        // Immediately show cached prediction while API loads
+        if (savedValue) {
+            confirmEl.textContent = `\u26A1 Your current prediction: ${savedValue} GW. You can still update it.`;
+            confirmEl.classList.remove('hidden');
+            document.getElementById('submit-btn').textContent = 'Update Prediction';
+        }
+
         try {
             const data = await API.getSubmissions(roundId);
             const mySubmission = data.submissions.find(
                 s => s.name.toLowerCase() === currentUser.toLowerCase()
             );
             if (mySubmission) {
-                const confirmEl = document.getElementById('confirmation-text');
                 if (mySubmission.prediction !== null) {
                     // Deadline passed — API reveals the value
                     confirmEl.textContent = `\u26A1 Your prediction: ${parseFloat(mySubmission.prediction).toFixed(2)} GW`;
+                } else if (savedValue) {
+                    // Before deadline — use localStorage value
+                    confirmEl.textContent = `\u26A1 Your current prediction: ${savedValue} GW. You can still update it.`;
                 } else {
-                    // Before deadline — API hides value; fall back to localStorage
-                    const savedValue = localStorage.getItem(`peakload_pred_${roundId}`);
-                    if (savedValue) {
-                        confirmEl.textContent = `\u26A1 Your current prediction: ${savedValue} GW. You can still update it.`;
-                    } else {
-                        confirmEl.textContent = `\u26A1 You've already submitted for this round. You can still update it.`;
-                    }
+                    confirmEl.textContent = `\u26A1 You've already submitted for this round. You can still update it.`;
                 }
                 confirmEl.classList.remove('hidden');
                 document.getElementById('submit-btn').textContent = 'Update Prediction';
             }
         } catch (e) {
-            // Non-critical — silently ignore if fetch fails
+            // API failed — localStorage already shown above, nothing else to do
         }
     }
 
