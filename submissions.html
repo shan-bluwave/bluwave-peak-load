@@ -113,14 +113,31 @@
     let allRounds = [];
 
     document.addEventListener('DOMContentLoaded', async () => {
+        // Instantly show cached rounds while API loads
+        const cached = localStorage.getItem('peakload_rounds');
+        if (cached) {
+            try {
+                allRounds = JSON.parse(cached);
+                populateRoundSelect();
+                loadSubmissions();
+            } catch (e) { /* corrupt cache */ }
+        }
+
         try {
             const data = await API.getRounds();
-            allRounds = data.rounds || [];
-            populateRoundSelect();
-            loadSubmissions();
+            const freshRounds = data.rounds || [];
+            const isNew = JSON.stringify(freshRounds) !== cached;
+            if (isNew) {
+                allRounds = freshRounds;
+                localStorage.setItem('peakload_rounds', JSON.stringify(freshRounds));
+                populateRoundSelect();
+                loadSubmissions();
+            }
         } catch (e) {
-            document.getElementById('submissions-body').innerHTML =
-                '<tr><td colspan="4" class="py-10 text-center text-red-400">Could not connect to backend. Configure your API URL in js/config.js</td></tr>';
+            if (!cached) {
+                document.getElementById('submissions-body').innerHTML =
+                    '<tr><td colspan="4" class="py-10 text-center text-red-400">Could not connect to backend. Configure your API URL in js/config.js</td></tr>';
+            }
         }
     });
 
@@ -144,13 +161,24 @@
         if (!roundId) return;
 
         const tbody = document.getElementById('submissions-body');
-        tbody.innerHTML = '<tr><td colspan="4" class="py-10 text-center"><span class="loading-battery">&#128267;</span><p class="text-blue-400/50 text-sm mt-2">Loading...</p></td></tr>';
+        const cacheKey = `peakload_subs_${roundId}`;
+
+        // Show cached submissions instantly
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+            try { renderSubmissions(JSON.parse(cached)); } catch (e) { /* ignore */ }
+        } else {
+            tbody.innerHTML = '<tr><td colspan="4" class="py-10 text-center"><span class="loading-battery">&#128267;</span><p class="text-blue-400/50 text-sm mt-2">Loading...</p></td></tr>';
+        }
 
         try {
             const data = await API.getSubmissions(roundId);
+            sessionStorage.setItem(cacheKey, JSON.stringify(data));
             renderSubmissions(data);
         } catch (e) {
-            tbody.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-red-400">Error loading submissions</td></tr>';
+            if (!cached) {
+                tbody.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-red-400">Error loading submissions</td></tr>';
+            }
         }
     }
 
